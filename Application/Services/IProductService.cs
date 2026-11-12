@@ -10,4 +10,6 @@ public interface IProductService
     Task<CreateProductResponseDTO> CreateProductAsync(CreateProductRequestDTO request);
 
     Task<GetProductsResponseDTO> GetProductsAsync(GetProductsRequestDTO request);
+
+    Task<ProductDTO?> UpdateProductAsync(UpdateProductRequestDTO request);
 }
