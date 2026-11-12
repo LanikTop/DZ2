@@ -11,15 +11,18 @@ public class ProductGrpcService : Presentation.Protos.ProductService.ProductServ
     private readonly IProductService _productService;
     private readonly IValidator<CreateProductRequestDTO> _createValidator;
     private readonly IValidator<GetProductsRequestDTO> _getValidator;
+    private readonly IValidator<UpdateProductRequestDTO> _updateValidator;
 
     public ProductGrpcService(
         IProductService productService,
         IValidator<CreateProductRequestDTO> createValidator,
-        IValidator<GetProductsRequestDTO> getValidator)
+        IValidator<GetProductsRequestDTO> getValidator,
+        IValidator<UpdateProductRequestDTO> updateValidator)
     {
         _productService = productService;
         _createValidator = createValidator;
         _getValidator = getValidator;
+        _updateValidator = updateValidator;
     }
 
     public override async Task<CreateProductResponse> CreateProduct(CreateProductRequest request,
@@ -73,6 +76,31 @@ public class ProductGrpcService : Presentation.Protos.ProductService.ProductServ
             throw new RpcException(new Status(StatusCode.NotFound, $"Товар с ID {id} не найден."));
 
         return new GetProductByIdResponse { Product = ToProto(product) };
+    }
+
+    public override async Task<UpdateProductResponse> UpdateProduct(UpdateProductRequest request,
+        ServerCallContext context)
+    {
+        if (!Guid.TryParse(request.Id, out var id))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Некорректный формат ID."));
+
+        var requestDTO = new UpdateProductRequestDTO
+        {
+            Id = id,
+            NewName = request.HasName ? request.Name : null,
+            NewPrice = request.HasPrice ? (decimal?)request.Price : null,
+            NewWeight = request.HasWeight ? (decimal?)request.Weight : null,
+            NewType = request.HasType ? ToDomainType(request.Type) : null,
+            NewWarehouseNumber = request.HasWarehouseNumber ? request.WarehouseNumber : null
+        };
+        ThrowIfInvalid(await _updateValidator.ValidateAsync(requestDTO));
+
+        var product = await _productService.UpdateProductAsync(requestDTO);
+
+        if (product == null)
+            throw new RpcException(new Status(StatusCode.NotFound, $"Товар с ID {id} не найден."));
+
+        return new UpdateProductResponse { Product = ToProto(product) };
     }
 
     private static ProductResponse ToProto(ProductDTO product) => new ProductResponse()
