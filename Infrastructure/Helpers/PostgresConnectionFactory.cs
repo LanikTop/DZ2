@@ -1,9 +1,5 @@
-﻿using FirebirdSql.Data.Services;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Npgsql;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Infrastructure.Helpers
 {
