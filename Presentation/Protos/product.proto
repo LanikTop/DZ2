@@ -44,6 +44,15 @@ message GetProductByIdRequest {
 	string id = 1;
 }
 
+message UpdateProductRequest {
+	string id = 1;
+	optional string name = 2;
+	optional double price = 3;
+	optional double weight = 4;
+	optional ProductType type = 5;
+	optional int32 warehouse_number = 6;
+}
+
 //  Product responses
 message CreateProductResponse {
 	string id = 1;
@@ -55,6 +64,10 @@ message GetProductsResponse {
 }
 
 message GetProductByIdResponse {
+ ProductResponse product = 1;
+}
+
+message UpdateProductResponse {
  ProductResponse product = 1;
 }
 
@@ -76,6 +89,13 @@ service ProductService {
   rpc GetProductById (GetProductByIdRequest) returns (GetProductByIdResponse) {
 	option (google.api.http) = {
 	  get: "/grps/products/{id}"
+	};
+  }
+
+  rpc UpdateProduct (UpdateProductRequest) returns (UpdateProductResponse) {
+	option (google.api.http) = {
+	  patch: "/grps/products/update"
+	  body: "*"
 	};
   }
 }
