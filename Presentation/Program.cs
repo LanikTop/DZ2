@@ -3,6 +3,8 @@ using Presentation.Interceptors;
 using Presentation.Middleware;
 using Application.Services;
 using FluentValidation;
+using Infrastructure.Migrations;
+using Infrastructure.Helpers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +14,8 @@ builder.Services.AddGrpc(options => options.Interceptors.Add<LoggingInterceptor>
 
 builder.Services.AddSingleton<IProductService, ProductService>();
 builder.Services.AddSingleton<IProductDAO, ProductDAO>();
+
+builder.Services.AddSingleton<IPostgresConnectionFactory, PostgresConnectionFactory>();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
@@ -24,6 +28,8 @@ builder.Services.AddGrpcSwagger();
 
 var app = builder.Build();
 
+app.RunMigrations();
+Dapper.DefaultTypeMap.MatchNamesWithUnderscores = true;
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthorization();
