@@ -1,5 +1,6 @@
 using Application.DTOs;
 using Application.Services;
+using Domain.Models;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,14 +13,17 @@ namespace Presentation.Controllers
         private readonly IProductService _productService;
         private readonly IValidator<CreateProductRequestDTO> _createValidator;
         private readonly IValidator<GetProductsRequestDTO> _getValidator;
+        private readonly IValidator<UpdateProductRequestDTO> _updateValidator;
 
         public ProductController(IProductService productService,
             IValidator<CreateProductRequestDTO> createValidator,
-            IValidator<GetProductsRequestDTO> getValidator)
+            IValidator<GetProductsRequestDTO> getValidator,
+            IValidator<UpdateProductRequestDTO> updateValidator)
         {
             _productService = productService;
             _createValidator = createValidator;
             _getValidator = getValidator;
+            _updateValidator = updateValidator;
         }
 
         [HttpGet("{productId:guid}")]
@@ -64,6 +68,28 @@ namespace Presentation.Controllers
             }
 
             var response = await _productService.GetProductsAsync(request);
+
+            return Ok(response);
+        }
+
+        [HttpPatch]
+        [Route("update")]
+        public async Task<ActionResult<ProductDTO>> UpdateProduct([FromBody] UpdateProductRequestDTO request)
+        {
+            var validationResult = await _updateValidator.ValidateAsync(
+                request,
+                HttpContext.RequestAborted);
+
+            if (!validationResult.IsValid)
+            {
+                AddValidationErrors(validationResult);
+                return ValidationProblem(ModelState);
+            }
+
+            var response = await _productService.UpdateProductAsync(request);
+
+            if (response == null)
+                return NotFound(new { Message = $"Товар с ID {request.Id} не найден." });
 
             return Ok(response);
         }
