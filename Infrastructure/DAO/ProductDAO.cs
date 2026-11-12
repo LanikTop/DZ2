@@ -1,44 +1,102 @@
 ﻿using Domain.Models;
-using System.Collections.Concurrent;
+using Dapper;
+using Microsoft.Extensions.Configuration;
+using Infrastructure.Helpers;
 
 namespace Infrastructure.DAO
 {
     public class ProductDAO : IProductDAO
     {
-        private readonly ConcurrentDictionary<Guid, Product> _products = new();
+        private readonly IPostgresConnectionFactory _connectionFactory;
 
-        public Task AddProductAsync(Product product)
+        public ProductDAO(IConfiguration configuration, IPostgresConnectionFactory postgresConnectionFactory)
         {
-            if (!_products.TryAdd(product.Id, product))
-            {
-                throw new InvalidOperationException(
-                    $"Товар с ID {product.Id} уже существует.");
-            }
+            _connectionFactory = postgresConnectionFactory;
+        }
 
-            return Task.CompletedTask;
+        public async Task AddProductAsync(Product product)
+        {
+            await using var connection = _connectionFactory.GetConnection();
+
+            var sql = @"INSERT INTO product_model
+                            (id, name, price, weight, type, created_at, warehouse_number)
+                        VALUES
+                            (@Id, @Name, @Price, @Weight, @Type, @CreatedAt, @WarehouseNumber)";
+
+            await connection.ExecuteAsync(sql, new
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Price = product.Price,
+                Weight = product.Weight,
+                Type = product.Type.ToString(),
+                CreatedAt = product.CreatedAt,
+                WarehouseNumber = product.WarehouseNumber
+            });
         }
 
         public async Task<Product?> GetProductByIdAsync(Guid id)
         {
-            _products.TryGetValue(id, out var product);
-            return await Task.FromResult(product);
+            await using var connection = _connectionFactory.GetConnection();
+
+            var sql = @"SELECT id, name, price, weight, type, created_at, warehouse_number
+                        FROM product_model
+                        WHERE id = @id";
+
+            var product = await connection.QueryFirstOrDefaultAsync<Product>(sql, new { id });
+
+            return product;
         }
 
-        public async Task<Product[]> GetProductsAsync(DateTimeOffset? createdAt, ProductType? type, int? warehouseNumber)
+        public async Task<Product[]> GetProductsAsync(DateTimeOffset? createdAt, ProductType? type, int? warehouseNumber, int page, int pageSize)
         {
-            var query = _products.Values.AsEnumerable();
-            if (createdAt.HasValue)
-                query = query.Where(p => p.CreatedAt >= createdAt.Value);
-            if (type.HasValue)
-                query = query.Where(p => p.Type == type.Value);
-            if (warehouseNumber.HasValue)
-                query = query.Where(p => p.WarehouseNumber == warehouseNumber.Value);
+            await using var connection = _connectionFactory.GetConnection();
 
-            var products = query
-                .OrderByDescending(p => p.CreatedAt)
-                .ToArray();
+            var sql = $@"SELECT id, name, price, weight, type, created_at, warehouse_number
+                        FROM product_model
+                        WHERE
+                            (@CreatedAt IS NULL OR created_at >= @CreatedAt)
+                            AND (@Type IS NULL OR type = @Type)
+                            AND (@WarehouseNumber IS NULL OR warehouse_number = @WarehouseNumber)
+                        ORDER BY created_at DESC
+                        OFFSET @Offset
+                        LIMIT @Limit";
 
-            return await Task.FromResult(products);
+            var products = await connection.QueryAsync<Product>(sql, new
+            {
+                CreatedAt = createdAt,
+                Type = type is null ? null : type.ToString(),
+                WarehouseNumber = warehouseNumber,
+                Offset = (page - 1) * pageSize,
+                Limit = pageSize
+            });
+
+            return products.ToArray();
+        }
+
+        public async Task<Product?> UpdateProductAsync(Guid id, string? newName, decimal? newPrice, decimal? newWeight, ProductType? newType, int? newWarehouseNumber)
+        {
+            await using var connection = _connectionFactory.GetConnection();
+
+            var sql = @"UPDATE product_model
+                        SET
+                            name = COALESCE(@NewName, name),
+                            price = COALESCE(@NewPrice, price),
+                            weight = COALESCE(@NewWeight, weight),
+                            type = COALESCE(@NewType, type),
+                            warehouse_number = COALESCE(@NewWarehouseNumber, warehouse_number)
+                        WHERE id = @Id
+                        RETURNING id, name, price, weight, type, created_at, warehouse_number";
+
+            return await connection.QueryFirstOrDefaultAsync<Product>(sql, new
+            {
+                Id = id,
+                NewName = newName,
+                NewPrice = newPrice,
+                NewWeight = newWeight,
+                NewType = newType is null ? null : newType.ToString(),
+                NewWarehouseNumber = newWarehouseNumber
+            });
         }
     }
 }
