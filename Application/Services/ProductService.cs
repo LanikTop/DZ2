@@ -49,11 +49,9 @@ public class ProductService : IProductService
 
     public async Task<GetProductsResponseDTO> GetProductsAsync(GetProductsRequestDTO request)
     {
-        var products = await _productDAO.GetProductsAsync(request.CreatedAt, request.Type, request.WarehouseNumber);
+        var products = await _productDAO.GetProductsAsync(request.CreatedAt, request.Type, request.WarehouseNumber, request.Page, request.PageSize);
 
         var productDTOs = products
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
             .Select(p => new ProductDTO
         {
             Id = p.Id,
