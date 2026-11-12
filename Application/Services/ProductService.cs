@@ -67,4 +67,22 @@ public class ProductService : IProductService
 
         return new GetProductsResponseDTO { Products = productDTOs, TotalCount = products.Length };
     }
+
+    public async Task<ProductDTO?> UpdateProductAsync(UpdateProductRequestDTO request)
+    {
+        var product = await _productDAO.UpdateProductAsync(request.Id, request.NewName, request.NewPrice, request.NewWeight, request.NewType, request.NewWarehouseNumber);
+
+        if (product == null) return null;
+
+        return new ProductDTO
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Price = product.Price,
+            Weight = product.Weight,
+            Type = product.Type,
+            CreatedAt = product.CreatedAt,
+            WarehouseNumber = product.WarehouseNumber
+        };
+    }
 }
