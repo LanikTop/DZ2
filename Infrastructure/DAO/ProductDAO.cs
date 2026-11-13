@@ -9,7 +9,7 @@ namespace Infrastructure.DAO
     {
         private readonly IPostgresConnectionFactory _connectionFactory;
 
-        public ProductDAO(IConfiguration configuration, IPostgresConnectionFactory postgresConnectionFactory)
+        public ProductDAO(IPostgresConnectionFactory postgresConnectionFactory)
         {
             _connectionFactory = postgresConnectionFactory;
         }
