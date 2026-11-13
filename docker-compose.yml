@@ -30,6 +30,20 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:8080
       ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=postgres;Username=postgres_user;Password=postgres_password"
+  
+  postgres-test:
+    image: postgres:15-alpine
+    container_name: postgres-test-db
+    environment:
+      POSTGRES_DB: postgres_test
+      POSTGRES_USER: postgres_test_user
+      POSTGRES_PASSWORD: postgres_test_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-test-pgdata:/var/lib/postgresql/data
+
 
 volumes:
   postgres-pgdata:
+  postgres-test-pgdata:
