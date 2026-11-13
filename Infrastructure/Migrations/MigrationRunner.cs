@@ -16,12 +16,17 @@ namespace Infrastructure.Migrations
             var connectionString = configuration.GetConnectionString("Postgres")
                 ?? throw new ArgumentNullException("Postgres connection string not found");
 
+            RunMigrations(connectionString);
+
+            return host;
+        }
+
+        public static void RunMigrations(string connectionString)
+        {
             var serviceContext = CreateService(connectionString);
             using var scope = serviceContext.CreateScope();
             var runner = scope.ServiceProvider.GetRequiredService<IMigrationRunner>();
             runner.MigrateUp();
-
-            return host;
         }
 
         private static IServiceProvider CreateService(string connectionString)
