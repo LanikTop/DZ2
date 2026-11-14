@@ -1,6 +1,5 @@
 using Application.DTOs;
 using Application.Services;
-using Domain.Models;
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 
